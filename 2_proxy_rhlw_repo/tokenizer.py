@@ -7,6 +7,7 @@ import argparse
 import sys
 from pathlib import Path
 
+import tokenizers
 from tokenizers import Tokenizer
 
 
@@ -80,6 +81,7 @@ def main(argv: list[str] | None = None) -> int:
             print(token_id)
         return 0
 
+    print(f"package: tokenizers {tokenizers.__version__}")
     print(f"tokenizer: {label}")
     print(f"vocab: {tokenizer.get_vocab_size()}")
     print(f"characters: {len(text)}")
