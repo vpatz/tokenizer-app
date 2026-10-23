@@ -7,6 +7,7 @@ Sample application to test installation and usage of Python tokenizers library.
 tokenizer-app/
 ├── README.md           # This file
 ├── python-shell-pod.yaml        # OpenShift pod, app files, and Nexus proxy auth job
+├── credentials_dummy.yaml        # Template file for credentials
 ├── 1_direct_rhlw_repo/
 │   ├── tokenizer.py                # CLI that tokenizes text with Hugging Face tokenizers
 │   └── requirements-lightwell.txt   # pip install directly from packages.redhat.com
