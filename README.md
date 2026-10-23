@@ -10,12 +10,12 @@ Sample application to test installation and usage of Python tokenizers library.
 1. Update credentials in 
 ```credentials_dummy.yaml```, rename locally to ```credentials.yaml```
 
-2. Connect to cluster using 
+2. Connect to cluster  
 ```
 oc login ...
 ``` 
 
-3. Apply secrets on cluster using 
+3. Apply secrets on cluster  
 ``` 
 oc apply -f credentials.yaml
 ```
@@ -26,24 +26,41 @@ oc apply -f python-shell-pod.yaml
 ```
 
 ## Demo-1: Direct Lightwell repo access
-1. Change directory and run ```pip```
+1. Open the Terminal tab for the ```python-shell-pod``` running in cluster.
+
+2. Change directory and run ```pip```
+
 ```
 $ cd 1_credentials.yaml
 $ pip install -r requirements-lightwell.txt
-
 ```
+
 ```pip``` will install ```tokenizers==0.23.1``` directly from lightwell validated and remidiated repositories and select the latest version based on the suffix  ```tokenizers==0.23.1+rhlw.1```
 
-2. Run tokenizer app to check if the tokernizers==0.23.1 is working as expected
+3. Run tokenizer app to check if the ```tokernizers==0.23.1``` is working as expected
+
 ```
 $ python tokenizer.py "This is a test sentence."
 ```
 
 ## Demo-2: Use Nexus to proxy the Lightwell repo
 1. Create proxy repos for each of Lightwell validated and remediated repos, e.g. ```lw-py-validated```, ```lw-py-remediated``` 
+
 2. Open the Terminal tab for the ```python-shell-pod``` running in cluster.
-2. Change directory and update repo paths in ```requirements-nexus.txt```
-3. Run ```pip install -r requirements-nexus.txt```. This will use Nexus as an in-cluster cached proxy to Lightwell repositories
+
+3. Change directory and update repo paths in ```requirements-nexus.txt```
+
+```
+cd 2_proxy_rhlw_repo
+```
+
+4. Run pip to use Nexus as an in-cluster cached proxy to Lightwell repositories
+
+```
+pip install -r requirements-nexus.txt
+```
+
+5.  Run tokenizer app to check if the ```tokernizers==0.23.1``` is working as expected
 
 ### Demo-3: Use Lightwell API 
 
