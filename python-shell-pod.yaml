@@ -1,0 +1,166 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: python-shell
+  namespace: token-project
+  labels:
+    app: python-shell
+spec:
+  containers:
+    - name: python
+      image: image-registry.openshift-image-registry.svc:5000/openshift/python:3.12-ubi9
+      command:
+        - /bin/bash
+        - -lc
+        - |
+          set -euo pipefail
+          git clone --depth 1 "$GIT_REPO" "$GIT_DIR"
+          exec sleep infinity
+      workingDir: /work
+      env:
+        - name: GIT_REPO
+          value: https://github.com/vpatz/tokenizer-app.git
+        - name: GIT_DIR
+          value: /work/tokenizer-app
+        - name: HOME
+          value: /opt/app-root/src
+        - name: HF_HOME
+          value: /tmp/hf
+        - name: NETRC
+          value: /netrc/.netrc
+      stdin: true
+      tty: true
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: ["ALL"]
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      volumeMounts:
+        - name: work
+          mountPath: /work
+        - name: netrc
+          mountPath: /netrc
+          readOnly: true
+  volumes:
+    - name: work
+      emptyDir: {}
+    - name: netrc
+      secret:
+        secretName: python-shell-netrc
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nexus-proxy-auth
+  namespace: lightwell-repo
+data:
+  apply-proxy.py: |
+    #!/usr/bin/env python3
+    """Reapply Nexus PyPI proxy URL and upstream credentials."""
+    import base64
+    import json
+    import urllib.error
+    import urllib.request
+    from pathlib import Path
+
+    user = Path("/secrets/lw/LW_USERNAME").read_text().strip()
+    password = Path("/secrets/lw/LW_PASSWORD").read_text().strip()
+    docker = json.loads(Path("/secrets/docker/.dockerconfigjson").read_text())
+    admin = next(iter(docker["auths"].values()))
+    token = base64.b64encode(f"{admin['username']}:{admin['password']}".encode()).decode()
+    base = "http://nexus.lightwell-repo.svc:8081/service/rest/v1/repositories/pypi/proxy/"
+    remotes = {
+        "lw-py-validated": "https://packages.redhat.com/lightwell/python/validated/",
+        "lw-py-remediated": "https://packages.redhat.com/lightwell/python/remediated/",
+    }
+
+    def call(url, method, body=None):
+        data = None if body is None else json.dumps(body).encode()
+        req = urllib.request.Request(url, data=data, method=method)
+        req.add_header("Authorization", f"Basic {token}")
+        req.add_header("Content-Type", "application/json")
+        try:
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                return resp.status, resp.read()
+        except urllib.error.HTTPError as exc:
+            return exc.code, exc.read()
+
+    for name, remote in remotes.items():
+        url = base + name
+        status, raw = call(url, "GET")
+        if status == 404:
+            body = {
+                "name": name,
+                "online": True,
+                "storage": {"blobStoreName": "default", "strictContentTypeValidation": True},
+                "proxy": {"remoteUrl": remote, "contentMaxAge": 1440, "metadataMaxAge": 1440},
+                "negativeCache": {"enabled": True, "timeToLive": 1440},
+                "httpClient": {
+                    "blocked": False,
+                    "autoBlock": True,
+                    "authentication": {"type": "username", "username": user, "password": password},
+                },
+            }
+            status, raw = call(url.rsplit("/", 1)[0], "POST", body)
+            print(name, "POST", status, raw[:200].decode(errors="replace"))
+            if status not in (200, 201, 204):
+                raise SystemExit(1)
+            continue
+        if status != 200:
+            print(name, "GET", status, raw[:200].decode(errors="replace"))
+            raise SystemExit(1)
+        cfg = json.loads(raw)
+        cfg["proxy"]["remoteUrl"] = remote
+        http = cfg.setdefault("httpClient", {})
+        http["blocked"] = False
+        http["autoBlock"] = True
+        http["authentication"] = {"type": "username", "username": user, "password": password}
+        status, raw = call(url, "PUT", cfg)
+        print(name, "PUT", status, raw[:200].decode(errors="replace"))
+        if status not in (200, 204):
+            raise SystemExit(1)
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: nexus-proxy-auth
+  namespace: lightwell-repo
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 86400
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: apply
+          image: image-registry.openshift-image-registry.svc:5000/openshift/python:3.12-ubi9
+          command: ["python3", "/script/apply-proxy.py"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+          volumeMounts:
+            - name: script
+              mountPath: /script
+            - name: lw
+              mountPath: /secrets/lw
+              readOnly: true
+            - name: docker
+              mountPath: /secrets/docker
+              readOnly: true
+      volumes:
+        - name: script
+          configMap:
+            name: nexus-proxy-auth
+            defaultMode: 0555
+        - name: lw
+          secret:
+            secretName: lightwell-network-credentials
+        - name: docker
+          secret:
+            secretName: nexus-docker-push

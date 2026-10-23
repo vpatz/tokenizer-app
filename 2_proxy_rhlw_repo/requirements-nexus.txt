@@ -1,0 +1,4 @@
+--index-url https://nexus-lightwell-repo.apps.cluster-kxrsv.dyn.redhatworkshops.io/repository/lw-py-validated/simple/
+--extra-index-url https://nexus-lightwell-repo.apps.cluster-kxrsv.dyn.redhatworkshops.io/repository/lw-py-remediated/simple/
+--trusted-host nexus-lightwell-repo.apps.cluster-kxrsv.dyn.redhatworkshops.io
+tokenizers==0.23.1+rhlw.1
