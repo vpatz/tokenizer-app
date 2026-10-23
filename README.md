@@ -41,6 +41,20 @@ $ pip install -r requirements-lightwell.txt
 
 ```
 $ python tokenizer.py "This is a test sentence."
+package: tokenizers 0.23.1+rhlw.1
+tokenizer: bert-base-uncased
+vocab: 30522
+characters: 24
+tokens: 8
+
+   0  101       '[CLS]'
+   1  2023      'this'
+   2  2003      'is'
+   3  1037      'a'
+   4  3231      'test'
+   5  6251      'sentence'
+   6  1012      '.'
+   7  102       '[SEP]'
 ```
 
 ## Demo-2: Use Nexus to proxy the Lightwell repo
@@ -49,7 +63,6 @@ $ python tokenizer.py "This is a test sentence."
 2. Open the Terminal tab for the ```python-shell-pod``` running in cluster.
 
 3. Change directory and update repo paths in ```requirements-nexus.txt```
-
 ```
 cd 2_proxy_rhlw_repo
 ```
@@ -61,6 +74,23 @@ pip install -r requirements-nexus.txt
 ```
 
 5.  Run tokenizer app to check if the ```tokernizers==0.23.1``` is working as expected
+```
+$ python tokenizer.py "This is another test sentence."
+package: tokenizers 0.23.1+rhlw.1
+tokenizer: bert-base-uncased
+vocab: 30522
+characters: 30
+tokens: 8
+
+   0  101       '[CLS]'
+   1  2023      'this'
+   2  2003      'is'
+   3  2178      'another'
+   4  3231      'test'
+   5  6251      'sentence'
+   6  1012      '.'
+   7  102       '[SEP]'
+```
 
 ### Demo-3: Use Lightwell API 
 
